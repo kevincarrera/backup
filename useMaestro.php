@@ -100,7 +100,7 @@ class Maestro {
                          $prioridadEx = explode("_",substr($idMaestro,0,17));
                          $lenString=strlen($prioridadEx[1]);
                          $prioridad = 1;
-                         $time =date('Y-m-d h:i:s', time());
+                         $time =date('Y-m-d H:i:s', time());
                         $duracion = $this->getDuration($maestro);
 
                          $data = array(
@@ -199,7 +199,7 @@ class Maestro {
                 }
                 $lenString=strlen($prioridadEx[1]);
                 $prioridad = 0;
-                $time =date('Y-m-d h:i:s', time());
+                $time =date('Y-m-d H:i:s', time());
                 $duracion = $this->getDuration($maestro);
                 $data = array(
                     'rutaCompleta'=>$maestro,
