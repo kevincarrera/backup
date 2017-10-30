@@ -113,12 +113,12 @@ class Maestro {
                              'duracion' => $duracion
                          );
 
-                         if ($prioridadEx[1] < $date && $lenString> 11) {
+                         if ($prioridadEx[1] < $date && $lenString> TAMANO_FILE_TEXT_VIDEO) {
                                  //si no existe
                                  $this->insertMaestro($data);
                              }
                          }
-                     if ($maestroExiste->I_PRIORIDAD==0 && $maestroExiste->V_PHASE==0) {
+                     if ($maestroExiste->I_PRIORIDAD== 0 && $maestroExiste->V_PHASE== 0) {
                          $this->upDateMaestro(array('rutaCompleta'=>$maestro,'prioridad'=>1));
                      }
                      //$this->insertMaestro($rutaCompleta);
@@ -141,7 +141,7 @@ class Maestro {
                      $filer = $this->getFile(  $dir_path . $file . "/",true);
                      $out = array_merge($out,$filer);
                  }  else {
-                     $pos = strpos($dir_path . $file,".mpg");
+                     $pos = strpos($dir_path . $file,EXTENSION_FORMATO_VIDEO_ORIGINAL);
                      if ($pos) {
                          $archivo = $dir_path . $file;
                          $trozos = explode(".", $archivo);
@@ -210,7 +210,7 @@ class Maestro {
                     'size' => round((filesize($maestro) / 1024 / 1024), 2),
                     'duracion' => $duracion
                 );
-                if ($prioridadEx[1] < $date && $lenString> 11) {
+                if ($prioridadEx[1] < $date && $lenString > TAMANO_FILE_TEXT_VIDEO) {
                     //si no existe
                     $this->insertMaestro($data);
                 }
@@ -295,12 +295,12 @@ class Maestro {
         $maestrosBackups = $this->getPhase(0);
         while ($maestro = $maestrosBackups->FetchNextObj()) {
             $dataMaestro[]= $maestro;
-            if ($maestro->i_peso < 750) {
+            if ($maestro->i_peso < PESO_MINIMO_VIDEO_ORIGINAL) {
 
                 // no se realiza backup de estos clip se cambia el valor de i_phase = 8
                 // tipo peso menor a lo permitido
                 //i_backup 0
-                $data= array("id"=>$maestro->i_mestro_id,"backup"=>0,'phase'=>1, 'tipo'=>'PESO_MENOR_DE_LO_PERMITIDO');
+                $data= array("id"=>$maestro->i_mestro_id,"backup"=>NO_BACKUP,'phase'=>PHASE_INCIO, 'tipo'=>'PESO_MENOR_DE_LO_PERMITIDO');
                 $this->upBackupPhasetipo($data);
                 continue;
             }
@@ -309,18 +309,18 @@ class Maestro {
                 // no se realiza backup de estos clip se cambia el valor de i_phase = 9
                 //tipo peso mayor a la duracion presenta desface
                 //i_backup 0
-                $data = array("id"=>$maestro->i_mestro_id,"backup"=>0,'phase'=>1, 'tipo'=>'PESO_MAYOR_QUE_DURACION_DESFACE');
+                $data = array("id"=>$maestro->i_mestro_id,"backup"=>NO_BACKUP,'phase'=>PHASE_INCIO, 'tipo'=>'PESO_MAYOR_QUE_DURACION_DESFACE');
                 $this->upBackupPhasetipo($data);
                 continue;
             }
 
-            $repeitoMaestro = $this->getReptidasVMaestro($maestro->v_maestro, true);
+            $repetidoMaestro = $this->getReptidasVMaestro($maestro->v_maestro, true);
             //var_dump($repeitoMaestro['cantidad']->N); exit();
            // var_dump($repeitoMaestro['cantidad']->N);
-            if($repeitoMaestro['cantidad']->N > 1) {
+            if($repetidoMaestro['cantidad']->N > 1) {
                 //Analisis entre las repetidas
                // var_dump($repeitoMaestro['data']);
-                while ($maestroRepetido = $repeitoMaestro['data']->FetchNextObj()) {
+                while ($maestroRepetido = $repetidoMaestro['data']->FetchNextObj()) {
                     //buscara todas las repetidas de este maestro para analizarlo entre ellos
 
                     $susRepetidos = $this->getReptidasVMaestro($maestroRepetido->v_maestro);
@@ -332,16 +332,16 @@ class Maestro {
                         }
                         if ($maestroSusRepetidos->i_prioridad == 1 ) {
                             //se hace su backup
-                            $data = array("id"=>$maestroSusRepetidos->i_mestro_id,"backup"=>1,'phase'=>2, 'tipo'=>'VIDEO_CON_PRIORIDAD_POR_SELECCION');
+                            $data = array("id"=>$maestroSusRepetidos->i_mestro_id,"backup"=>DISPONIBLE_BACKUP,'phase'=>PHASE_PRIMER_FILTRO, 'tipo'=>'VIDEO_CON_PRIORIDAD_POR_SELECCION');
                             $this->upBackupPhasetipo($data);
                             $i++;
                             continue;
                         } else {
                             if ($i==0){
                                 //el que dura más no ha sido usa para hacer clip
-                                $data = array("id"=>$maestroSusRepetidos->i_mestro_id,"backup"=>1,'phase'=>2, 'tipo'=>'VIDEO_CON_MEJOR_CALIDAD_DE_LOS_REPETIDOS');
+                                $data = array("id"=>$maestroSusRepetidos->i_mestro_id,"backup"=>DISPONIBLE_BACKUP,'phase'=>PHASE_PRIMER_FILTRO, 'tipo'=>'VIDEO_CON_MEJOR_CALIDAD_DE_LOS_REPETIDOS');
                             } else {
-                                $data=array("id"=>$maestroSusRepetidos->i_mestro_id,"backup"=>0,'phase'=>1, 'tipo'=>'VIDEO_CON_MENOR_CALIDAD_DE_LOS_REPETIDOS');
+                                $data=array("id"=>$maestroSusRepetidos->i_mestro_id,"backup"=>NO_BACKUP,'phase'=>PHASE_PRIMER_FILTRO, 'tipo'=>'VIDEO_CON_MENOR_CALIDAD_DE_LOS_REPETIDOS');
                             }
                             $this->upBackupPhasetipo($data);
                         }
@@ -358,7 +358,7 @@ class Maestro {
                 //video unico se tiene que hacer backup
                 //tipo sin problemas
                 //i_backup 1
-                $data = array("id"=>$maestro->i_mestro_id,"backup"=>1,'phase'=>2, 'tipo'=>'SIN_DUPLICADOS');
+                $data = array("id"=>$maestro->i_mestro_id,"backup"=>DISPONIBLE_BACKUP,'phase'=>PHASE_PRIMER_FILTRO, 'tipo'=>'SIN_DUPLICADOS');
                 $this->upBackupPhasetipo($data);
             }
         }
@@ -436,7 +436,7 @@ class Maestro {
                     //var_dump($data[$i-1]['vFechaMaestro'],$data[$i]['vFechaMaestro'] );exit();
                     if ($data[$i-1]['vFechaMaestro']==$data[$i]['vFechaMaestro']){
                         $up[] = array("id"=> $data[$i]['id'],
-                                    "phase"=>10,
+                                    "phase"=>PHASE_DUPLICADO_EXISTENTE,
                                     "vMaestro"=> $data[$i]['vMaestro'],
                                     "tiempo"=>'');
                         unset($data[$i]);
@@ -449,15 +449,15 @@ class Maestro {
                         }*/
 
                         if ( $data[$i-1]['fechaDuracion'] > $data[$i]['fechaUnix']){
-                            $tiempo = ($data[$i]['fechaUnix'] - $data[$i-1]['fechaUnix']) + 300;
+                            $tiempo = ($data[$i]['fechaUnix'] - $data[$i-1]['fechaUnix']) + DURACION_ADICIONAL;
                             $up[] = array("id"=> $data[$i-1]['id'],
-                                "phase"=>3,
+                                "phase"=>PHASE_SEGUNDO_FILTRO,
                                 "vMaestro"=> $data[$i-1]['vMaestro'],
                                 "tiempo"=>$tiempo);
                         } else {
                             $tiempo = $data[$i-1]['duracion'];
                             $up[] = array("id"=> $data[$i-1]['id'],
-                                "phase"=>3,
+                                "phase"=>PHASE_SEGUNDO_FILTRO,
                                 "vMaestro"=> $data[$i-1]['vMaestro'],
                                 "tiempo"=>$tiempo);
                         }
@@ -467,7 +467,7 @@ class Maestro {
 
             } while ($maestroOrden);
             $up[] = array("id"=> $data[$i-1]['id'],
-                "phase"=>3,
+                "phase"=>PHASE_SEGUNDO_FILTRO,
                 "vMaestro"=> $data[$i-1]['vMaestro'],
                 "tiempo"=>$data[$i-1]['duracion']);
         }
@@ -492,12 +492,12 @@ class Maestro {
         global $dbOwncloud;
         if ($group){
         $sql = "SELECT * FROM tb_maestro
-                WHERE v_maestro LIKE '%$maestro%' AND i_backup = '1' AND v_phase='2'
+                WHERE v_maestro LIKE '%$maestro%' AND i_backup = '".DISPONIBLE_BACKUP."' AND v_phase='".PHASE_PRIMER_FILTRO."'
                 ORDER BY `v_fecha_maestro`, i_prioridad DESC";
         $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar getOrdenFechaMaestro ");
             } else {
             $sql = "SELECT SUBSTRING(v_maestro,1,13) as video FROM `tb_maestro`
-                    WHERE `i_backup` = '1' AND v_phase='2'
+                    WHERE `i_backup` '".DISPONIBLE_BACKUP."' AND v_phase='".PHASE_PRIMER_FILTRO."'
                     GROUP BY video
                     ORDER BY `v_fecha_maestro` DESC";
 
@@ -509,8 +509,8 @@ class Maestro {
     public function execute()
     {  $timeStampMinHour = exec('cat /var/www/html/backup/data/temp/backup.txt');
 
-        if(empty($timeStampMinHour) || $timeStampMinHour<=10){
-            $backups = $this->getBackup(2);
+        if(empty($timeStampMinHour) || $timeStampMinHour <= MAX_BACKUP){
+            $backups = $this->getBackup(LIMIT_EJECUCION);
 
             // var_dump($backups); exit();
           //  $j=1;
@@ -518,12 +518,12 @@ class Maestro {
 
                 if (file_exists($backup->v_ruta_completa)) {
                     $timeStampMinHour = exec('cat /var/www/html/backup/data/temp/backup.txt');
-                    if(empty($timeStampMinHour) || $timeStampMinHour<=10){
+                    if(empty($timeStampMinHour) || $timeStampMinHour <= MAX_BACKUP){
 
 
                     $i = explode("/", $backup->v_ruta_completa);
                     $i = substr(end($i), 0, -4);
-                        if (!file_exists("/mnt/serverbackup/".$i.".mp4") && !file_exists("/mnt/serverbackup2/".$i.".mp4")) {
+                        if (!file_exists(RUTA_BACKUP . $i. BACKUP_FORMATO) && !file_exists(RUTA_BACKUP_SECUNDARIO . $i . BACKUP_FORMATO)) {
                         //$i= substr($backup->v_ruta_completa,0,-3);
                         //var_dump($i);exit();
                         $data = array("ruta" => $backup->v_ruta_completa,
@@ -533,15 +533,15 @@ class Maestro {
                         $mas = 1 + $timeStampMinHour;
                         //$ejecucion = new ejecutar($data);
                         //$ejecucion->start();
-                        exec("cd /var/www/html/backup; ./do.php ejecutar " . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id . " 2>/dev/null >/dev/null &");
-                        var_dump("cd /var/www/html/backup; ./do.php ejecutar " . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id . " 2>/dev/null >/dev/null &");
+                        exec(COMANT_EJECUION . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id . " 2>/dev/null >/dev/null &");
+                        var_dump(COMANT_EJECUION . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id . " 2>/dev/null >/dev/null &");
                         //exit();
-                        $this->upEjecucionBackup(array('phase' => 4, 'backup' => 2, 'id' => $backup->i_mestro_id));
-                        exec("echo $mas > /var/www/html/backup/data/temp/backup.txt");
+                        $this->upEjecucionBackup(array('phase' => PHASE_ERROR, 'backup' => BACKUP_EN_PROCESO, 'id' => $backup->i_mestro_id));
+                        exec("echo $mas > ". CONTROL_BACKUP);
 
-                        }
+                    }
                      else {
-                        $this->upEjecucionBackup(array('phase' => 5, 'backup' =>3, 'id' => $backup->i_mestro_id));
+                        $this->upEjecucionBackup(array('phase' => PHASE_TERMINADO, 'backup' => BACKUP_TERMINADO_CON_EXSITO, 'id' => $backup->i_mestro_id));
                     }
                     } else {
                         exit();
@@ -549,7 +549,7 @@ class Maestro {
                 } else {
                     //video dejo de existir
                     echo "no existe";
-                    $this->upEjecucionBackup(array('phase' => 7, 'backup' => 5, 'id' => $backup->i_mestro_id));
+                    $this->upEjecucionBackup(array('phase' => PHASE_EN_EJECUCION_NO_EXISTE, 'backup' => BACKUP_TERMINADO_CON_EXSITO, 'id' => $backup->i_mestro_id));
                 }
 
             }
@@ -570,15 +570,15 @@ class Maestro {
         exec($strComando, $output, $rv);
         if ($rv) {
             //errores
-            $this->upEjecucionBackup(array('phase'=>5,'backup'=>4,'id'=>$id));
+            $this->upEjecucionBackup(array('phase'=>PHASE_TERMINADO,'backup'=>BACKUP_CON_ERROR,'id'=>$id));
             exit;
         } else {
             //sin errores
-            $this->upEjecucionBackup(array('phase'=>5,'backup'=>3,'id'=>$id));
+            $this->upEjecucionBackup(array('phase'=>PHASE_TERMINADO,'backup'=>BACKUP_TERMINADO_CON_EXSITO,'id'=>$id));
         }
-        $timeStampMinHour = exec('cat /var/www/html/backup/data/temp/backup.txt');
+        $timeStampMinHour = exec('cat '. CONTROL_BACKUP);
         $menos = $timeStampMinHour-1;
-        exec("echo $menos > /var/www/html/backup/data/temp/backup.txt");
+        exec("echo $menos > ". CONTROL_BACKUP);
 
     }
     public function upEjecucionBackup($data){
@@ -591,7 +591,7 @@ class Maestro {
     public function getBackup($rango) {
         global $dbOwncloud;
         $sql = "SELECT * FROM tb_maestro
-                WHERE i_backup = '1' AND v_phase='3'
+                WHERE i_backup = '".DISPONIBLE_BACKUP."' AND v_phase='".PHASE_SEGUNDO_FILTRO."'
                 AND i_tiempo <> ''
                 ORDER BY i_tiempo LIMIT 0, $rango";
         $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar getOrdenFechaMaestro ");

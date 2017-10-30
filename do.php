@@ -3,6 +3,7 @@
 <?php
 
 include "useMaestro.php";
+include "config/constant.php";
 switch (count($argv)) {
     case 6:
             $action = $argv[1];
