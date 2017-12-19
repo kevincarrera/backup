@@ -12,6 +12,7 @@ class Maestro {
 
     public $config;
 
+    public $format="mpg";
     public function __construct( $config = array() )
     {
 
@@ -84,7 +85,7 @@ class Maestro {
                      $origenes = array("mythtv4/", "mythtv5/", "mythtv3/");
                      break;
                  case "secundaria":
-                     $origenes = array("mythtv7/", "mythtv8/", "mythtv6/");
+                     $origenes = array("mythtv9/","mythtv7/", "mythtv8/", "mythtv6/");
                      break;
              }
              foreach ($origenes as $origene) {
@@ -130,24 +131,30 @@ class Maestro {
      if ($dh = opendir($dir_path)) {
 
          while (($file = readdir($dh)) !== false) {
-             if( $file != "." && $file != ".." &&  $file != ".." &&  $file != "nasnetgear03" &&  $file != "disco_ssd"
+             /*if( $file != "." && $file != ".." &&  $file != ".." &&  $file != "nasnetgear03" &&  $file != "disco_ssd"
                  &&  $file != "freenas" &&  $file != "imediahost" &&  $file != "custm" &&  $file != "serverclipping" &&  $file != "sc"
                  &&  $file != "nasnetgear02" &&  $file != "Backups" &&  $file != "freenas0" &&  $file != "kpiviejo"
                  &&  $file != "nasnetgear" &&  $file != "netgear" &&  $file != "serverbackup" &&  $file != "serverbackup2"
              ){
+                 */
+             //var_dump($file);
+
+             $pos = strpos($file, $this->format);
+             if( $pos) {
+                 //var_dump($this->format);
                  if (is_dir($dir_path . $file) && $file != "." ) {
                      //solo si el archivo es un directorio, distinto que "." y ".."
                      // echo "<br>Directorio: $dir_path.$file";
                      $filer = $this->getFile(  $dir_path . $file . "/",true);
                      $out = array_merge($out,$filer);
                  }  else {
-                     $pos = strpos($dir_path . $file,EXTENSION_FORMATO_VIDEO_ORIGINAL);
+                     $pos = strpos($dir_path . $file,$this->format);
                      if ($pos) {
                          $archivo = $dir_path . $file;
                          $trozos = explode(".", $archivo);
                          $extension = end($trozos);
 
-                         if ($extension == "mpg") {
+                         if ($extension == $this->format ) {
                              array_push($out, $dir_path . $file);
                          }
                      }
@@ -168,9 +175,9 @@ class Maestro {
 
     function insertMaestro($maestro){
         global $dbOwncloud;
-        $sql = "INSERT INTO tb_maestro (v_ruta_completa, v_maestro, v_fecha_maestro, i_prioridad, v_phase, date_cr , i_peso,i_duracion)
+        $sql = "INSERT INTO tb_maestro (v_ruta_completa, v_maestro, v_fecha_maestro, i_prioridad, v_phase, date_cr , i_peso,i_duracion,v_format)
                 VALUES ('$maestro[rutaCompleta]', '$maestro[maestro]', '$maestro[fechaMaestro]', '$maestro[prioridad]',
-                 '0', '$maestro[dateCreate]','$maestro[size]', '$maestro[duracion]')";
+                 '0', '$maestro[dateCreate]','$maestro[size]', '$maestro[duracion]','$maestro[format]')";
         $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar insertMaestro ");
     }
 
@@ -182,8 +189,15 @@ class Maestro {
         return $rs->FetchObject();
     }
 
-    function get() {
-        $maestros = $this->getFile("/mnt/");
+    function get($r=array()) {
+        if (empty($r)) {
+            $maestros = $this->getFile("/mnt/");
+        } else {
+            $this->format= $r["format"];
+            $maestros = $this->getFile($r["raiz"],true);
+
+           // var_dump($this->format); exit();
+        }
         $date = $hour =date("YmdHi", (strtotime ("-24 Hours")));
         foreach ($maestros as $maestro) {
 
@@ -208,7 +222,8 @@ class Maestro {
                     'prioridad'=>$prioridad,
                     'dateCreate'=> $time,
                     'size' => round((filesize($maestro) / 1024 / 1024), 2),
-                    'duracion' => $duracion
+                    'duracion' => $duracion,
+                    'format'=> $this->format
                 );
                 if ($prioridadEx[1] < $date && $lenString > TAMANO_FILE_TEXT_VIDEO) {
                     //si no existe
@@ -216,6 +231,7 @@ class Maestro {
                 }
             }
         }
+        $this->backup();
     }
 
     /**
@@ -295,7 +311,9 @@ class Maestro {
         $maestrosBackups = $this->getPhase(0);
         while ($maestro = $maestrosBackups->FetchNextObj()) {
             $dataMaestro[]= $maestro;
-            if ($maestro->i_peso < PESO_MINIMO_VIDEO_ORIGINAL) {
+            $pesoMinimo = $this->format!="mpg"? PESO_MINIMO_VIDEO_ORIGINAL_FORMAT: PESO_MINIMO_VIDEO_ORIGINAL;
+            var_dump($pesoMinimo);
+            if ($maestro->i_peso < $pesoMinimo) {
 
                 // no se realiza backup de estos clip se cambia el valor de i_phase = 8
                 // tipo peso menor a lo permitido
@@ -396,7 +414,8 @@ class Maestro {
     public function getPhase($phase){
         global $dbOwncloud;
         $sql = "SELECT * FROM tb_maestro
-                WHERE v_phase = '$phase'";
+                WHERE v_phase = '$phase'
+                AND v_format='$this->format'";
         $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar getPhase ");
         return $rs;
     }
@@ -493,34 +512,44 @@ class Maestro {
         if ($group){
         $sql = "SELECT * FROM tb_maestro
                 WHERE v_maestro LIKE '%$maestro%' AND i_backup = '".DISPONIBLE_BACKUP."' AND v_phase='".PHASE_PRIMER_FILTRO."'
+                 AND v_format='".$this->format."'
                 ORDER BY `v_fecha_maestro`, i_prioridad DESC";
-        $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar getOrdenFechaMaestro ");
+        $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar getOrdenFechaMaestro true");
             } else {
             $sql = "SELECT SUBSTRING(v_maestro,1,13) as video FROM `tb_maestro`
-                    WHERE `i_backup` '".DISPONIBLE_BACKUP."' AND v_phase='".PHASE_PRIMER_FILTRO."'
+                    WHERE `i_backup` = '".DISPONIBLE_BACKUP."' AND v_phase='".PHASE_PRIMER_FILTRO."'
+                     AND v_format='".$this->format."'
                     GROUP BY video
                     ORDER BY `v_fecha_maestro` DESC";
 
-            $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar getOrdenFechaMaestro ");
+            $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar getOrdenFechaMaestro false ");
         }
         return $rs;
         }
 
-    public function execute()
-    {  $timeStampMinHour = exec('cat /var/www/html/backup/data/temp/backup.txt');
+    public function execute($r=array())
+    {
+        $control=CONTROL_BACKUP;
+        $timeStampMinHour = exec('cat '. $control);
 
         if(empty($timeStampMinHour) || $timeStampMinHour <= MAX_BACKUP){
-            $backups = $this->getBackup(LIMIT_EJECUCION);
+            $backups = $this->getBackup(array("limit"=>LIMIT_EJECUCION, "format"=>".".$this->format));
 
             // var_dump($backups); exit();
           //  $j=1;
+            if((empty($timeStampMinHour) || $timeStampMinHour == 0) && !empty($r)){
+                $control = CONTROL_BACKUP_FORMAT;
+                $countBackupFormat = exec('cat '. $control);
+
+                if(empty($countBackupFormat) || $countBackupFormat <= MAX_BACKUP) {
+                    $backups = $this->getBackup(array("limit" => LIMIT_EJECUCION, "format" => $r["format"]));
+                }
+            }
             while ($backup = $backups->FetchNextObj()) {
 
                 if (file_exists($backup->v_ruta_completa)) {
-                    $timeStampMinHour = exec('cat /var/www/html/backup/data/temp/backup.txt');
-                    if(empty($timeStampMinHour) || $timeStampMinHour <= MAX_BACKUP){
-
-
+                    $timeStampMinHour =  exec('cat '. $control);
+                    if(empty($timeStampMinHour) || $timeStampMinHour <= 4) {
                     $i = explode("/", $backup->v_ruta_completa);
                     $i = substr(end($i), 0, -4);
                         if (!file_exists(RUTA_BACKUP . $i. BACKUP_FORMATO) && !file_exists(RUTA_BACKUP_SECUNDARIO . $i . BACKUP_FORMATO)) {
@@ -533,11 +562,18 @@ class Maestro {
                         $mas = 1 + $timeStampMinHour;
                         //$ejecucion = new ejecutar($data);
                         //$ejecucion->start();
-                        exec(COMANT_EJECUION . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id . " 2>/dev/null >/dev/null &");
-                        var_dump(COMANT_EJECUION . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id . " 2>/dev/null >/dev/null &");
+                       if(empty($r["format"])) {
+                           exec(COMANT_EJECUION . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id . " 2>/dev/null >/dev/null &");
+                           var_dump(COMANT_EJECUION . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id . " 2>/dev/null >/dev/null &");
+
+                       } else {
+                           exec(COMANT_EJECUION . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id . " ". $r["format"] ." 2>/dev/null >/dev/null &");
+                           var_dump(COMANT_EJECUION . $backup->v_ruta_completa . " " . $backup->i_tiempo . " " . $i . " " . $backup->i_mestro_id ." ". $r["format"] ." 2>/dev/null >/dev/null &");
+                       }
+
                         //exit();
-                        $this->upEjecucionBackup(array('phase' => PHASE_ERROR, 'backup' => BACKUP_EN_PROCESO, 'id' => $backup->i_mestro_id));
-                        exec("echo $mas > ". CONTROL_BACKUP);
+                        $this->upEjecucionBackup(array('phase' => MAESTRO_EJECUTADO, 'backup' => BACKUP_EN_PROCESO, 'id' => $backup->i_mestro_id));
+                        exec("echo $mas > ". $control);
 
                     }
                      else {
@@ -558,27 +594,59 @@ class Maestro {
         }
     }
 
-    public function run($rutaCompleta, $tiempo, $i, $id)
+    public function run($rutaCompleta, $tiempo, $i, $id,$format="mpg")
     {
-        $temp = "/mnt/serverbackup/";
-        //parent::run(); // TODO: Change the autogenerated stub
-        $strComando = "/usr/bin/ffmpeg -i {$rutaCompleta} -r 15  -vcodec libx264   " .
-            "-t {$tiempo} -b:v 700k -acodec libfdk_aac -ab 32k  -ar 44100 -s 720x480 -f mp4 -y {$temp}{$i}.mp4" .
-            "  >>/tmp/{$i}_2.txt 2>>/tmp/{$i}_2.txt ";
+        switch($format)
+        {
+            case "mpg":
+                $temp = "/mnt/serverbackup/";
+                //parent::run(); // TODO: Change the autogenerated stub
+                $strComando = "/usr/bin/ffmpeg -i {$rutaCompleta} -r 15  -vcodec libx264   " .
+                    "-t {$tiempo} -b:v 700k -acodec libfdk_aac -ab 32k  -ar 44100 -s 720x480 -f mp4 -y {$temp}{$i}.mp4" .
+                    "  >>/tmp/{$i}_2.txt 2>>/tmp/{$i}_2.txt ";
+                print $strComando . "\n";
+                exec($strComando, $output, $rv);
+                if ($rv) {
+                    //errores
+                    $this->upEjecucionBackup(array('phase'=>PHASE_TERMINADO,'backup'=>BACKUP_CON_ERROR,'id'=>$id));
+                    exit;
+                } else {
+                    //sin errores
+                    $this->upEjecucionBackup(array('phase'=>PHASE_TERMINADO,'backup'=>BACKUP_TERMINADO_CON_EXSITO,'id'=>$id));
+                }
+                $timeStampMinHour = exec('cat '. CONTROL_BACKUP);
+                $menos = $timeStampMinHour-1;
+                exec("echo $menos > ". CONTROL_BACKUP);
+                break;
+            case "avi":
+                $temp = RUTA_BAKUP_FORMAT;
+                //parent::run(); // TODO: Change the autogenerated stub
+                $strComando = "/usr/bin/ffmpeg -i {$rutaCompleta} -r 15  -vcodec libx264   " .
+                    "-t {$tiempo} -b:v 700k -acodec libfdk_aac -ab 32k  -ar 44100 -s 720x480 -f mp4 -y {$temp}{$i}.mp4" .
+                    "  >>/tmp/{$i}_2.txt 2>>/tmp/{$i}_2.txt ";
+                print $strComando . "\n";
+                exec($strComando, $output, $rv);
+                if ($rv) {
+                    //errores
+                    $this->upEjecucionBackup(array('phase'=>PHASE_TERMINADO,'backup'=>BACKUP_CON_ERROR,'id'=>$id));
+                    exit;
+                } else {
+                    //sin errores
+                    $this->upEjecucionBackup(array('phase'=>PHASE_TERMINADO,'backup'=>BACKUP_TERMINADO_CON_EXSITO,'id'=>$id));
+                }
+                $timeStampMinHour = exec('cat '. CONTROL_BACKUP_FORMAT);
+                $menos = $timeStampMinHour-1;
+                exec("echo $menos > ". CONTROL_BACKUP_FORMAT);
+                break;
+            default:
+                echo "error en el formato de video";
+                exit();
+                break;
 
-        print $strComando . "\n";
-        exec($strComando, $output, $rv);
-        if ($rv) {
-            //errores
-            $this->upEjecucionBackup(array('phase'=>PHASE_TERMINADO,'backup'=>BACKUP_CON_ERROR,'id'=>$id));
-            exit;
-        } else {
-            //sin errores
-            $this->upEjecucionBackup(array('phase'=>PHASE_TERMINADO,'backup'=>BACKUP_TERMINADO_CON_EXSITO,'id'=>$id));
         }
-        $timeStampMinHour = exec('cat '. CONTROL_BACKUP);
-        $menos = $timeStampMinHour-1;
-        exec("echo $menos > ". CONTROL_BACKUP);
+
+
+
 
     }
     public function upEjecucionBackup($data){
@@ -593,16 +661,51 @@ class Maestro {
         $sql = "SELECT * FROM tb_maestro
                 WHERE i_backup = '".DISPONIBLE_BACKUP."' AND v_phase='".PHASE_SEGUNDO_FILTRO."'
                 AND i_tiempo <> ''
-                ORDER BY i_tiempo LIMIT 0, $rango";
+                AND v_format = '".$rango["format"]."'
+                ORDER BY i_tiempo LIMIT 0, ".$rango["limit"]." ";
+        //var_dump($sql);
         $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar getOrdenFechaMaestro ");
     return $rs;
     }
 
+    public function borrarMaestro($r=array("hora"=>96)){
+        if(empty($r['format']))
+        {
+            $this->format="mpg";
+        } else {
+            $this->format=$r['format'];
+        }
+        $date = $hour =date("YmdHis", (strtotime ("-$r[hora] Hours")));
+        global $dbOwncloud;
+        $sql = "SELECT * FROM tb_maestro WHERE i_backup IN ('3','0') AND i_drop='0' AND date_cr < '$date'  AND v_format = '".$this->format."'";
+        var_dump($sql);
+        $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar borrarMaestro ");
+
+        while ($o = $rs->FetchNextObject()) {
+            $datas[]= array("id"=>$o->I_MESTRO_ID,
+                "ruta" => $o->V_RUTA_COMPLETA
+            );
+        }
+
+        foreach ($datas as $data) {
+            if (file_exists($data["ruta"])) {
+                var_dump($data["ruta"]);
+                unlink($data["ruta"]);
+                unlink($data["ruta"].".png");
+                echo "file existe";
+                $sql = "UPDATE tb_maestro SET i_drop = '1'
+                WHERE i_mestro_id='$data[id]'";
+                $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar upEjecucionBackup ");
+            } else {
+                if (file_exists($data["ruta"].".png")) {
+                    unlink($data["ruta"].".png");
+                }
+                echo "file not  existe";
+                $sql = "UPDATE tb_maestro SET i_drop = '1'
+                WHERE i_mestro_id='$data[id]'";
+                $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar upEjecucionBackup ");
+            }
+        }
+
+    }
 }
-
-
-
-//$a = new Maestro();
-//$a->get();
-//$a->backup();
-//$a->ordenMaestro();

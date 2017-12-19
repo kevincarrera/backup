@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="e7d58437-a6c3-4944-8a7c-e8a6bff214a1" name="maestro" url="http://192.168.1.16">
+        <fileTransfer host="192.168.1.16" port="22" rootFolder="/home/maestro/backup" accessType="SFTP" password="df9fdf9fdf9fdfc8dfcbdfcedf9edfc9df9fdf98" username="maestro">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
