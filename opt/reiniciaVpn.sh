@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ruta="/home/maestro/backup/data/temp";
 date=`/bin/date +%Y%m%d`
 echo $ruta/reset_${date}.log;
