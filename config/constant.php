@@ -5,7 +5,6 @@
  * Date: 30/10/2017
  * Time: 11:56 AM
  */
-
 DEFINE('DS', '/');
 define('ROOT_PATH', dirname(__DIR__).DS);
 define("PHASE_ERROR", 4);
@@ -35,5 +34,6 @@ define("BACKUP_EN_PROCESO",2);
 define("BACKUP_TERMINADO_CON_EXSITO",3);
 define("BACKUP_CON_ERROR",4);
 define("RUTA_BAKUP_FORMAT","/mnt/serverbackup/");
-define("FILE_VPN_STATUS","openvpn-status.log");
-define("FILE_LOG_VPN","/home/maestro/backup/openvpn.log ");
+define("FILE_TEMP", ROOT_PATH."data/temp/");
+define("FILE_VPN_STATUS",FILE_TEMP."openvpn-status.log");
+define("FILE_LOG_VPN", FILE_TEMP."openvpn.log ");
