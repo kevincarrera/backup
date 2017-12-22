@@ -5,6 +5,7 @@
  * Date: 30/10/2017
  * Time: 11:56 AM
  */
+
 DEFINE('DS', '/');
 define('ROOT_PATH', dirname(__DIR__).DS);
 define("PHASE_ERROR", 4);
