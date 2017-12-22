@@ -193,6 +193,7 @@ class Vpn {
      * resetVpn
      */
     function resetVpn (){
+
         $file=FILE_VPN_STATUS;
         exec("cat ".$file,$outs);
         $conectado='';
