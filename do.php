@@ -59,8 +59,12 @@ switch (count($argv)) {
                 break;
             case 'vpn':
                 //ultimo proceeso
-                $feedObj = new Vpn();
-                $feedObj->getFileVpn();
+                $vpn = new Vpn();
+                $vpn->getFileVpn();
+                break;
+            case 'reset-vpn':
+                $vpn = new Vpn();
+                $vpn->resetVpn();
                 break;
             default:
                 echo "parametro incorecto";

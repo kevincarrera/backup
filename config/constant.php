@@ -34,3 +34,5 @@ define("BACKUP_EN_PROCESO",2);
 define("BACKUP_TERMINADO_CON_EXSITO",3);
 define("BACKUP_CON_ERROR",4);
 define("RUTA_BAKUP_FORMAT","/mnt/serverbackup/");
+define("FILE_VPN_STATUS","openvpn-status.log");
+define("FILE_LOG_VPN","/home/maestro/backup/openvpn.log ");
