@@ -214,10 +214,10 @@ class Vpn
                 $conectado .= $out . "\n";
             }
         }
-        $fileResetOk = "/home/maestro/backup/data/temp/" . "reset_" . date("Ymd") . "_ok.log";
+        $fileResetOk = FILE_TEMP . "openvpn/". "reset_" . date("Ymd") . "_ok.log";
         if (empty($conectado) && !file_exists($fileResetOk)) {
             print_r("Se esta creando aplicacion para el reinicio de OpenVpn");
-            $fileReset = "/home/maestro/backup/data/temp/" . "reset_" . date("Ymd") . ".log";
+            $fileReset =  FILE_TEMP . "openvpn/" . "reset_" . date("Ymd") . ".log";
             touch($fileReset);
         } else {
             echo "El reinicio de openvpn ya se realizo por el dia hoy " . "\n";
