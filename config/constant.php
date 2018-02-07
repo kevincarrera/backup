@@ -9,6 +9,7 @@ DEFINE('DS', '/');
 define('ROOT_PATH', dirname(__DIR__).DS);
 define("PHASE_ERROR", 4);
 define("MAESTRO_EJECUTADO",4);
+define("PHASE_EJECUTANDO_BACKUP",4);
 define("PHASE_INCIO", 1);
 define("PHASE_PRIMER_FILTRO", 2);
 define("PHASE_SEGUNDO_FILTRO", 3);
