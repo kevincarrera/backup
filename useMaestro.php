@@ -122,7 +122,6 @@ class Maestro {
                      if ($maestroExiste->I_PRIORIDAD== 0 && $maestroExiste->V_PHASE== 0) {
                          $this->upDateMaestro(array('rutaCompleta'=>$maestro,'prioridad'=>1));
                      }
-                     //$this->insertMaestro($rutaCompleta);
                      break;
                  }
              }
@@ -195,8 +194,6 @@ class Maestro {
         } else {
             $this->format= $r["format"];
             $maestros = $this->getFile($r["raiz"],true);
-
-           // var_dump($this->format); exit();
         }
         $date = $hour =date("YmdHi", (strtotime ("-24 Hours")));
         foreach ($maestros as $maestro) {
@@ -317,7 +314,6 @@ class Maestro {
 
                 // no se realiza backup de estos clip se cambia el valor de i_phase = 8
                 // tipo peso menor a lo permitido
-                //i_backup 0
                 $data= array("id"=>$maestro->i_mestro_id,"backup"=>NO_BACKUP,'phase'=>PHASE_INCIO, 'tipo'=>'PESO_MENOR_DE_LO_PERMITIDO');
                 $this->upBackupPhasetipo($data);
                 continue;
@@ -326,25 +322,20 @@ class Maestro {
             if ($maestro->i_peso > $maestro->i_duracion) {
                 // no se realiza backup de estos clip se cambia el valor de i_phase = 9
                 //tipo peso mayor a la duracion presenta desface
-                //i_backup 0
                 $data = array("id"=>$maestro->i_mestro_id,"backup"=>NO_BACKUP,'phase'=>PHASE_INCIO, 'tipo'=>'PESO_MAYOR_QUE_DURACION_DESFACE');
                 $this->upBackupPhasetipo($data);
                 continue;
             }
 
             $repetidoMaestro = $this->getReptidasVMaestro($maestro->v_maestro, true);
-            //var_dump($repeitoMaestro['cantidad']->N); exit();
-           // var_dump($repeitoMaestro['cantidad']->N);
             if($repetidoMaestro['cantidad']->N > 1) {
                 //Analisis entre las repetidas
-               // var_dump($repeitoMaestro['data']);
                 while ($maestroRepetido = $repetidoMaestro['data']->FetchNextObj()) {
                     //buscara todas las repetidas de este maestro para analizarlo entre ellos
 
                     $susRepetidos = $this->getReptidasVMaestro($maestroRepetido->v_maestro);
                     $i=0;
                     while ($maestroSusRepetidos = $susRepetidos->FetchNextObj()) {
-                       // $data[] = $maestroSusRepetidos;
                         if ($maestroSusRepetidos->v_phase !=0 ){
                             continue;
                         }
@@ -375,7 +366,6 @@ class Maestro {
                 }
                 //video unico se tiene que hacer backup
                 //tipo sin problemas
-                //i_backup 1
                 $data = array("id"=>$maestro->i_mestro_id,"backup"=>DISPONIBLE_BACKUP,'phase'=>PHASE_PRIMER_FILTRO, 'tipo'=>'SIN_DUPLICADOS');
                 $this->upBackupPhasetipo($data);
             }
@@ -421,7 +411,6 @@ class Maestro {
     }
 
     public function upBackupPhasetipo($data){
-        //var_dump($data);
         global $dbOwncloud;
         $sql = "UPDATE tb_maestro SET v_phase='$data[phase]', i_backup='$data[backup]', i_tipo='$data[tipo]'
                 WHERE (i_mestro_id='$data[id]')";
@@ -459,14 +448,8 @@ class Maestro {
                                     "vMaestro"=> $data[$i]['vMaestro'],
                                     "tiempo"=>'');
                         unset($data[$i]);
-                        //$i--;
                         continue;
                     } else {
-                       /* if ($i>2){
-                            //var_dump($up);
-                            continue;
-                        }*/
-
                         if ( $data[$i-1]['fechaDuracion'] > $data[$i]['fechaUnix']){
                             $tiempo = ($data[$i]['fechaUnix'] - $data[$i-1]['fechaUnix']) + DURACION_ADICIONAL;
                             $up[] = array("id"=> $data[$i-1]['id'],
@@ -496,7 +479,6 @@ class Maestro {
     public function upTiempo($datas){
         global $dbOwncloud;
         $i=0;
-        //var_dump($datas);exit();
         foreach ($datas as $data)
         {
             $sql="UPDATE tb_maestro SET v_phase='$data[phase]', i_tiempo='$data[tiempo]'
@@ -535,8 +517,6 @@ class Maestro {
         if(empty($timeStampMinHour) || $timeStampMinHour <= MAX_BACKUP){
             $backups = $this->getBackup(array("limit"=>LIMIT_EJECUCION, "format"=>".".$this->format));
 
-            // var_dump($backups); exit();
-          //  $j=1;
             if((empty($timeStampMinHour) || $timeStampMinHour == 0) && !empty($r)){
                 $control = CONTROL_BACKUP_FORMAT;
                 $countBackupFormat = exec('cat '. $control);
@@ -553,8 +533,6 @@ class Maestro {
                     $i = explode("/", $backup->v_ruta_completa);
                     $i = substr(end($i), 0, -4);
                         if (!file_exists(RUTA_BACKUP . $i. BACKUP_FORMATO) && !file_exists(RUTA_BACKUP_SECUNDARIO . $i . BACKUP_FORMATO)) {
-                        //$i= substr($backup->v_ruta_completa,0,-3);
-                        //var_dump($i);exit();
                         $data = array("ruta" => $backup->v_ruta_completa,
                             "tiempo" => $backup->i_tiempo,
                             "i" => $i
@@ -572,7 +550,7 @@ class Maestro {
                        }
 
                         //exit();
-                        $this->upEjecucionBackup(array('phase' => MAESTRO_EJECUTADO, 'backup' => BACKUP_EN_PROCESO, 'id' => $backup->i_mestro_id));
+                        $this->upEjecucionBackup(array('phase' => PHASE_EJECUTANDO_BACKUP, 'backup' => BACKUP_EN_PROCESO, 'id' => $backup->i_mestro_id));
                         exec("echo $mas > ". $control);
 
                     }
@@ -663,7 +641,6 @@ class Maestro {
                 AND i_tiempo <> ''
                 AND v_format = '".$rango["format"]."'
                 ORDER BY i_tiempo LIMIT 0, ".$rango["limit"]." ";
-        //var_dump($sql);
         $rs = $dbOwncloud->Execute($sql) or die ($dbOwncloud->ErrorMsg() . " Error al ejecutar getOrdenFechaMaestro ");
     return $rs;
     }
